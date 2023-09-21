@@ -7,6 +7,7 @@ from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
 from moveit_msgs.action import MoveGroup
 from moveit_msgs.msg import (
     CollisionObject,
+    AttachedCollisionObject,
     Constraints,
     JointConstraint,
     MoveItErrorCodes,
@@ -45,8 +46,8 @@ class MoveIt2:
         joint_names: List[str],
         base_link_name: str,
         end_effector_name: str,
-        group_name: str = "arm",
-        execute_via_moveit: bool = False,
+        group_name: str = "ur_manipulator",
+        execute_via_moveit: bool = True,
         ignore_new_calls_while_executing: bool = False,
         callback_group: Optional[CallbackGroup] = None,
         follow_joint_trajectory_action_name: str = "joint_trajectory_controller/follow_joint_trajectory",
@@ -190,7 +191,7 @@ class MoveIt2:
         )
 
         self.__collision_object_publisher = self._node.create_publisher(
-            CollisionObject, "/collision_object", 10
+            AttachedCollisionObject, "/attached_collision_object", 10
         )
 
         self.__joint_state_mutex = threading.Lock()
@@ -847,7 +848,8 @@ class MoveIt2:
             ) from err
 
         mesh = trimesh.load(filepath)
-        msg = CollisionObject()
+        msg = AttachedCollisionObject()#CollisionObject()
+        msg.link_name = frame_id
 
         if not isinstance(position, Point):
             position = Point(
@@ -864,9 +866,9 @@ class MoveIt2:
         pose = Pose()
         pose.position = position
         pose.orientation = quat_xyzw
-        msg.pose = pose
+        msg.object.pose = pose
 
-        msg.meshes.append(
+        msg.object.meshes.append(
             Mesh(
                 triangles=[MeshTriangle(vertex_indices=face) for face in mesh.faces],
                 vertices=[
@@ -875,12 +877,14 @@ class MoveIt2:
             )
         )
 
-        msg.id = id
-        msg.operation = operation
-        msg.header.frame_id = (
-            frame_id if frame_id is not None else self.__base_link_name
-        )
-        msg.header.stamp = self._node.get_clock().now().to_msg()
+        msg.object.id = id
+        print(id)
+        msg.object.operation = operation
+        msg.object.header.frame_id = frame_id
+        # (
+        #     frame_id if frame_id is not None else self.__base_link_name
+        # )
+        msg.object.header.stamp = self._node.get_clock().now().to_msg()
 
         self.__collision_object_publisher.publish(msg)
 
@@ -889,10 +893,11 @@ class MoveIt2:
         Remove collision object specified by its `id`.
         """
 
-        msg = CollisionObject()
-        msg.id = id
-        msg.operation = CollisionObject.REMOVE
-        msg.header.stamp = self._node.get_clock().now().to_msg()
+        msg = AttachedCollisionObject()
+        msg.object.id = id
+        msg.object.operation = CollisionObject.REMOVE
+        msg.object.header.stamp = self._node.get_clock().now().to_msg()
+        print(msg)
         self.__collision_object_publisher.publish(msg)
 
     def __joint_state_callback(self, msg: JointState):
@@ -1182,8 +1187,8 @@ class MoveIt2:
         # move_action_goal.request.pipeline_id = "Ignored"
         # move_action_goal.request.planner_id = "Ignored"
         move_action_goal.request.group_name = group_name
-        move_action_goal.request.num_planning_attempts = 5
-        move_action_goal.request.allowed_planning_time = 0.5
+        move_action_goal.request.num_planning_attempts = 50 #
+        move_action_goal.request.allowed_planning_time = 5.0 #0.5
         move_action_goal.request.max_velocity_scaling_factor = 0.0
         move_action_goal.request.max_acceleration_scaling_factor = 0.0
         move_action_goal.request.cartesian_speed_end_effector_link = end_effector

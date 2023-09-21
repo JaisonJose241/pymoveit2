@@ -11,7 +11,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
 
 from pymoveit2 import MoveIt2
-from pymoveit2.robots import panda
+from pymoveit2.robots import ur5
 
 
 def main():
@@ -21,8 +21,8 @@ def main():
     node = Node("ex_pose_goal")
 
     # Declare parameters for position and orientation
-    node.declare_parameter("position", [0.5, 0.0, 0.25])
-    node.declare_parameter("quat_xyzw", [1.0, 0.0, 0.0, 0.0])
+    node.declare_parameter("position", [0.35, 0.10, 0.68])
+    node.declare_parameter("quat_xyzw", [0.5, 0.5, 0.5, 0.5])
     node.declare_parameter("cartesian", False)
 
     # Create callback group that allows execution of callbacks in parallel without restrictions
@@ -31,10 +31,10 @@ def main():
     # Create MoveIt 2 interface
     moveit2 = MoveIt2(
         node=node,
-        joint_names=panda.joint_names(),
-        base_link_name=panda.base_link_name(),
-        end_effector_name=panda.end_effector_name(),
-        group_name=panda.MOVE_GROUP_ARM,
+        joint_names=ur5.joint_names(),
+        base_link_name=ur5.base_link_name(),
+        end_effector_name=ur5.end_effector_name(),
+        group_name=ur5.MOVE_GROUP_ARM,
         callback_group=callback_group,
     )
 
